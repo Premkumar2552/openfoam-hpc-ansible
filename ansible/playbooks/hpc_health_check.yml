@@ -1,0 +1,49 @@
+---
+- name: HPC Platform Health Check
+  hosts: hpc_nodes
+  become: true
+
+  tasks:
+
+    - name: Check hostname
+      command: hostname
+      register: hostname_result
+      changed_when: false
+
+    - name: Check CPU count
+      command: nproc
+      register: cpu_result
+      changed_when: false
+
+    - name: Check memory
+      command: free -h
+      register: memory_result
+      changed_when: false
+
+    - name: Check Slurm controller
+      command: systemctl is-active slurmctld
+      register: slurmctld_result
+      changed_when: false
+      failed_when: false
+
+    - name: Check Slurm compute daemon
+      command: systemctl is-active slurmd
+      register: slurmd_result
+      changed_when: false
+      failed_when: false
+
+    - name: Check Slurm node state
+      command: sinfo -h -o "%P %a %D %T %N"
+      register: sinfo_result
+      changed_when: false
+
+    - name: Display HPC health
+      debug:
+        msg:
+          - "Hostname: {{ hostname_result.stdout }}"
+          - "CPUs: {{ cpu_result.stdout }}"
+          - "Memory:"
+          - "{{ memory_result.stdout }}"
+          - "slurmctld: {{ slurmctld_result.stdout }}"
+          - "slurmd: {{ slurmd_result.stdout }}"
+          - "Slurm nodes: {{ sinfo_result.stdout }}"

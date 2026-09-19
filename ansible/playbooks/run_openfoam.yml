@@ -1,0 +1,163 @@
+---
+- name: Run and Verify OpenFOAM Workload through Slurm
+  hosts: hpc_controller
+  become: true
+
+  vars:
+    case_dir: "/home/cfd07/CFD_Projects/HPC_Platform/openfoam/pitzDaily"
+    job_script: "/home/cfd07/CFD_Projects/HPC_Platform/jobs/openfoam_pitzDaily.slurm"
+    results_dir: "/home/cfd07/CFD_Projects/HPC_Platform/results"
+
+  tasks:
+
+    - name: Check slurmctld service
+      command: systemctl is-active slurmctld
+      register: slurmctld_status
+      changed_when: false
+
+    - name: Check slurmd service
+      command: systemctl is-active slurmd
+      register: slurmd_status
+      changed_when: false
+
+    - name: Verify OpenFOAM installation
+      shell: |
+        source /usr/lib/openfoam/openfoam2412/etc/bashrc
+        echo "VERSION=$WM_PROJECT_VERSION"
+        echo "DIR=$WM_PROJECT_DIR"
+        which blockMesh
+        which checkMesh
+        which simpleFoam
+      args:
+        executable: /bin/bash
+      register: openfoam_info
+      changed_when: false
+
+    - name: Display HPC environment
+      debug:
+        msg:
+          - "Hostname: {{ ansible_hostname }}"
+          - "CPU cores: {{ ansible_processor_vcpus }}"
+          - "Memory: {{ ansible_memtotal_mb }} MB"
+          - "slurmctld: {{ slurmctld_status.stdout }}"
+          - "slurmd: {{ slurmd_status.stdout }}"
+          - "{{ openfoam_info.stdout_lines[0] }}"
+          - "{{ openfoam_info.stdout_lines[1] }}"
+
+    - name: Submit OpenFOAM job through Slurm
+      command: sbatch {{ job_script }}
+      register: submit_job
+
+    - name: Extract Slurm job ID
+      set_fact:
+        slurm_job_id: "{{ submit_job.stdout | regex_search('[0-9]+') }}"
+
+    - name: Display submitted job
+      debug:
+        msg: "Submitted Slurm Job ID: {{ slurm_job_id }}"
+
+    - name: Wait for Slurm job to finish
+      shell: |
+        if squeue -h -j {{ slurm_job_id }} | grep -q .; then
+          echo RUNNING
+        else
+          echo FINISHED
+        fi
+      register: job_wait
+      until: job_wait.stdout == "FINISHED"
+      retries: 60
+      delay: 5
+      changed_when: false
+
+    - name: Get final Slurm job state
+      shell: |
+        scontrol show job {{ slurm_job_id }} |
+        grep -o "JobState=[^ ]*" |
+        cut -d= -f2
+      register: final_state
+      changed_when: false
+
+    - name: Get Slurm exit code
+      shell: |
+        scontrol show job {{ slurm_job_id }} |
+        grep -o "ExitCode=[^ ]*" |
+        cut -d= -f2
+      register: exit_code
+      changed_when: false
+
+    - name: Check OpenFOAM case directories
+      shell: |
+        find "{{ case_dir }}" -mindepth 1 -maxdepth 1 -type d \
+        -printf '%f\n' |
+        grep -E '^[0-9]+([.][0-9]+)?$' |
+        sort -n
+      register: foam_times
+      changed_when: false
+      failed_when: false
+
+    - name: Determine latest OpenFOAM time
+      shell: |
+        find "{{ case_dir }}" -mindepth 1 -maxdepth 1 -type d \
+        -printf '%f\n' |
+        grep -E '^[0-9]+([.][0-9]+)?$' |
+        sort -n |
+        tail -1
+      register: latest_time
+      changed_when: false
+      failed_when: false
+
+    - name: Check OpenFOAM mesh
+      stat:
+        path: "{{ case_dir }}/constant/polyMesh/boundary"
+      register: mesh_file
+
+    - name: Check latest OpenFOAM result
+      stat:
+        path: "{{ case_dir }}/{{ latest_time.stdout }}"
+      register: latest_result
+      when: latest_time.stdout | length > 0
+
+    - name: Check Slurm output file
+      stat:
+        path: "{{ results_dir }}/pitzDaily_{{ slurm_job_id }}.out"
+      register: slurm_output
+
+    - name: Read OpenFOAM job output
+      shell: |
+        cat "{{ results_dir }}/pitzDaily_{{ slurm_job_id }}.out"
+      register: job_output
+      changed_when: false
+      failed_when: false
+
+    - name: Display OpenFOAM job output
+      debug:
+        msg: "{{ job_output.stdout_lines }}"
+
+    - name: Display final HPC report
+      debug:
+        msg:
+          - "======================================"
+          - "       HPC CFD JOB REPORT"
+          - "======================================"
+          - "Slurm Job ID     : {{ slurm_job_id }}"
+          - "Slurm State      : {{ final_state.stdout }}"
+          - "Exit Code        : {{ exit_code.stdout }}"
+          - "OpenFOAM         : {{ openfoam_info.stdout_lines[0] }}"
+          - "Mesh             : {{ 'PASS' if mesh_file.stat.exists else 'FAIL' }}"
+          - "Time Directories : {{ foam_times.stdout_lines | join(', ') }}"
+          - "Latest Time      : {{ latest_time.stdout | default('NONE') }}"
+          - "Result Directory : {{ 'FOUND' if latest_result.stat.exists | default(false) else 'NOT FOUND' }}"
+          - "======================================"
+
+    - name: Fail if Slurm failed
+      fail:
+        msg: "Slurm job failed: State={{ final_state.stdout }}, ExitCode={{ exit_code.stdout }}"
+      when:
+        - final_state.stdout != "COMPLETED"
+          or exit_code.stdout != "0:0"
+
+    - name: Fail if OpenFOAM result was not generated
+      fail:
+        msg: "Slurm completed successfully but no OpenFOAM time directory was detected."
+      when:
+        - latest_time.stdout | length == 0

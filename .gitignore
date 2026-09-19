@@ -1,0 +1,26 @@
+# OpenFOAM generated files
+processor*/
+postProcessing/
+[1-9]*/
+log.*
+
+# Runtime files
+*.out
+*.log
+*.err
+
+# Temporary files
+*.swp
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+
+# Ansible
+*.retry
+
+# OS files
+.DS_Store
+Thumbs.db
+

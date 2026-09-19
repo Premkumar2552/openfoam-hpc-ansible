@@ -1,0 +1,46 @@
+---
+- name: Slurm Service Monitoring and Remediation
+  hosts: hpc_nodes
+  become: true
+
+  tasks:
+
+    - name: Check slurmctld
+      command: systemctl is-active slurmctld
+      register: slurmctld_status
+      changed_when: false
+      failed_when: false
+
+    - name: Restart slurmctld if unhealthy
+      systemd:
+        name: slurmctld
+        state: restarted
+      when: slurmctld_status.stdout != "active"
+
+    - name: Check slurmd
+      command: systemctl is-active slurmd
+      register: slurmd_status
+      changed_when: false
+      failed_when: false
+
+    - name: Restart slurmd if unhealthy
+      systemd:
+        name: slurmd
+        state: restarted
+      when: slurmd_status.stdout != "active"
+
+    - name: Verify slurmctld
+      command: systemctl is-active slurmctld
+      register: slurmctld_final
+      changed_when: false
+
+    - name: Verify slurmd
+      command: systemctl is-active slurmd
+      register: slurmd_final
+      changed_when: false
+
+    - name: Display remediation result
+      debug:
+        msg:
+          - "slurmctld: {{ slurmctld_final.stdout }}"
+          - "slurmd: {{ slurmd_final.stdout }}"
