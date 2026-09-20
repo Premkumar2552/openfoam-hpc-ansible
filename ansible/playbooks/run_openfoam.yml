@@ -150,12 +150,12 @@
 
     - name: Check Slurm output file
       stat:
-        path: "{{ results_dir }}/pitzDaily_{{ slurm_job_id }}.out"
+        path: "{{ project_dir }}/slurm-{{ slurm_job_id }}.out"
       register: slurm_output
 
     - name: Read OpenFOAM job output
       shell: |
-        cat "{{ results_dir }}/pitzDaily_{{ slurm_job_id }}.out"
+        cat "{{ project_dir }}/slurm-{{ slurm_job_id }}.out"
       register: job_output
       changed_when: false
       failed_when: false
