@@ -43,4 +43,3 @@
       debug:
         msg:
           - "slurmctld: {{ slurmctld_final.stdout }}"
-          - "slurmd: {{ slurmd_final.stdout }}"
