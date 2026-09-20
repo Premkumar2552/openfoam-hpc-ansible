@@ -1,10 +1,12 @@
 # Automated HPC Platform for OpenFOAM CFD
 
-An Ansible-based HPC workflow for monitoring a Slurm environment and running OpenFOAM CFD simulations through automated job submission and verification.
+An Ansible-based HPC workflow for configuring and monitoring Slurm and running OpenFOAM CFD simulations through automated job submission and verification.
 
 ## Overview
 
-This project demonstrates an automated workflow for running CFD simulations on an HPC environment using Ansible, Slurm and OpenFOAM.
+This project demonstrates a reproducible workflow for running CFD simulations on an HPC environment using Ansible, Slurm and OpenFOAM.
+
+The repository contains the Ansible playbooks, Slurm configuration template, job scripts and OpenFOAM case required to set up and run the workflow.
 
 The workflow covers:
 
