@@ -6,8 +6,9 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=2G
 #SBATCH --time=00:30:00
-#SBATCH --output=/home/cfd07/CFD_Projects/HPC_Platform/results/pitzDaily_%j.out
-#SBATCH --error=/home/cfd07/CFD_Projects/HPC_Platform/results/pitzDaily_%j.err
+
+PROJECT_DIR="$SLURM_SUBMIT_DIR"
+CASE="$PROJECT_DIR/openfoam/pitzDaily"
 
 echo "OpenFOAM Slurm job"
 echo "Job ID: $SLURM_JOB_ID"
@@ -16,6 +17,7 @@ echo "Node: $SLURMD_NODENAME"
 echo "CPUs: $SLURM_CPUS_PER_TASK"
 echo "Memory: $SLURM_MEM_PER_NODE"
 echo "Start time: $(date)"
+echo "Project directory: $PROJECT_DIR"
 
 echo ""
 echo "Loading OpenFOAM"
@@ -32,9 +34,7 @@ which blockMesh
 which checkMesh
 which simpleFoam
 
-CASE=/home/cfd07/CFD_Projects/HPC_Platform/openfoam/pitzDaily
-
-cd "$CASE"
+cd "$CASE" || exit 1
 
 echo ""
 echo "Running blockMesh"
