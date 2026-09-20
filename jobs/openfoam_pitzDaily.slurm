@@ -9,27 +9,24 @@
 #SBATCH --output=/home/cfd07/CFD_Projects/HPC_Platform/results/pitzDaily_%j.out
 #SBATCH --error=/home/cfd07/CFD_Projects/HPC_Platform/results/pitzDaily_%j.err
 
-echo "======================================"
-echo "OpenFOAM Slurm HPC Job"
-echo "======================================"
-
-echo "Job ID       : $SLURM_JOB_ID"
-echo "Job Name     : $SLURM_JOB_NAME"
-echo "Node         : $SLURMD_NODENAME"
-echo "CPUs         : $SLURM_CPUS_PER_TASK"
-echo "Memory       : $SLURM_MEM_PER_NODE"
-echo "Start time   : $(date)"
+echo "OpenFOAM Slurm job"
+echo "Job ID: $SLURM_JOB_ID"
+echo "Job name: $SLURM_JOB_NAME"
+echo "Node: $SLURMD_NODENAME"
+echo "CPUs: $SLURM_CPUS_PER_TASK"
+echo "Memory: $SLURM_MEM_PER_NODE"
+echo "Start time: $(date)"
 
 echo ""
-echo "===== LOADING OPENFOAM ====="
+echo "Loading OpenFOAM"
 
 source /usr/lib/openfoam/openfoam2412/etc/bashrc
 
-echo "OpenFOAM Version : $WM_PROJECT_VERSION"
-echo "OpenFOAM Dir     : $WM_PROJECT_DIR"
+echo "OpenFOAM version: $WM_PROJECT_VERSION"
+echo "OpenFOAM directory: $WM_PROJECT_DIR"
 
 echo ""
-echo "===== EXECUTABLES ====="
+echo "Checking OpenFOAM executables"
 
 which blockMesh
 which checkMesh
@@ -40,23 +37,21 @@ CASE=/home/cfd07/CFD_Projects/HPC_Platform/openfoam/pitzDaily
 cd "$CASE"
 
 echo ""
-echo "===== RUNNING BLOCKMESH ====="
+echo "Running blockMesh"
 
 blockMesh
 
 echo ""
-echo "===== RUNNING CHECKMESH ====="
+echo "Running checkMesh"
 
 checkMesh
 
 echo ""
-echo "===== RUNNING SIMPLEFOAM ====="
+echo "Running simpleFoam"
 
 simpleFoam
 
 echo ""
-echo "======================================"
-echo "JOB COMPLETED"
-echo "======================================"
+echo "Job completed"
 
 date
