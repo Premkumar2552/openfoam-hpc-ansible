@@ -47,3 +47,7 @@
           - "slurmctld: {{ slurmctld_result.stdout }}"
           - "slurmd: {{ slurmd_result.stdout }}"
           - "Slurm nodes: {{ sinfo_result.stdout }}"
+          - "{{ memory_result.stdout }}"
+          - "slurmctld: {{ slurmctld_result.stdout }}"
+          - "slurmd: {{ slurmd_result.stdout }}"
+          - "Slurm nodes: {{ sinfo_result.stdout }}"
