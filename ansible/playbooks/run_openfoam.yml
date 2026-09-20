@@ -4,9 +4,12 @@
   become: true
 
   vars:
-    case_dir: "/home/cfd07/CFD_Projects/HPC_Platform/openfoam/pitzDaily"
-    job_script: "/home/cfd07/CFD_Projects/HPC_Platform/jobs/openfoam_pitzDaily.slurm"
-    results_dir: "/home/cfd07/CFD_Projects/HPC_Platform/results"
+    project_dir: "{{ playbook_dir }}/../.."
+    case_dir: "{{ project_dir }}/openfoam/pitzDaily"
+    job_script: "{{ project_dir }}/jobs/openfoam_pitzDaily.slurm"
+    results_dir: "{{ project_dir }}/results"
+
+    openfoam_bashrc: "/usr/lib/openfoam/openfoam2412/etc/bashrc"
 
   tasks:
 
@@ -22,7 +25,7 @@
 
     - name: Verify OpenFOAM installation
       shell: |
-        source /usr/lib/openfoam/openfoam2412/etc/bashrc
+        source "{{ openfoam_bashrc }}"
         echo "VERSION=$WM_PROJECT_VERSION"
         echo "DIR=$WM_PROJECT_DIR"
         which blockMesh
@@ -44,8 +47,36 @@
           - "{{ openfoam_info.stdout_lines[0] }}"
           - "{{ openfoam_info.stdout_lines[1] }}"
 
+    - name: Check OpenFOAM case
+      stat:
+        path: "{{ case_dir }}"
+      register: case_check
+
+    - name: Fail if OpenFOAM case is missing
+      fail:
+        msg: "OpenFOAM case not found: {{ case_dir }}"
+      when: not case_check.stat.exists
+
+    - name: Check Slurm job script
+      stat:
+        path: "{{ job_script }}"
+      register: job_script_check
+
+    - name: Fail if Slurm job script is missing
+      fail:
+        msg: "Slurm job script not found: {{ job_script }}"
+      when: not job_script_check.stat.exists
+
+    - name: Create results directory
+      file:
+        path: "{{ results_dir }}"
+        state: directory
+        mode: "0755"
+
     - name: Submit OpenFOAM job through Slurm
-      command: sbatch {{ job_script }}
+      command: sbatch "{{ job_script }}"
+      args:
+        chdir: "{{ project_dir }}"
       register: submit_job
 
     - name: Extract Slurm job ID
@@ -136,9 +167,7 @@
     - name: Display final HPC report
       debug:
         msg:
-          - "======================================"
-          - "       HPC CFD JOB REPORT"
-          - "======================================"
+          - "HPC CFD JOB REPORT"
           - "Slurm Job ID     : {{ slurm_job_id }}"
           - "Slurm State      : {{ final_state.stdout }}"
           - "Exit Code        : {{ exit_code.stdout }}"
@@ -147,7 +176,6 @@
           - "Time Directories : {{ foam_times.stdout_lines | join(', ') }}"
           - "Latest Time      : {{ latest_time.stdout | default('NONE') }}"
           - "Result Directory : {{ 'FOUND' if latest_result.stat.exists | default(false) else 'NOT FOUND' }}"
-          - "======================================"
 
     - name: Fail if Slurm failed
       fail:
